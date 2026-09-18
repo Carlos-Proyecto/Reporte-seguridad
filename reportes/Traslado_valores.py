@@ -1,24 +1,15 @@
-import os
-import logging
-from datetime import datetime
 import urllib.parse
-from dotenv import load_dotenv
+from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, CallbackQueryHandler,
-    MessageHandler, filters, ContextTypes, ConversationHandler
+    CommandHandler, CallbackQueryHandler, MessageHandler,
+    filters, ContextTypes, ConversationHandler
 )
-
-# Cargar variables de entorno desde archivo .env si existe
-load_dotenv()
-
-# Configuración de logs
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Estados de la conversación
 CAJAS, GESTION_PAGO, SEGURIDAD, POLICIA, NOVEDADES = range(5)
 
-# Datos persistentes en memoria (listas Maestras de personal y cajas)
+# Datos persistentes en memoria (listas maestras)
 LISTA_CAJAS = ["Gestión de Pago", "Cardio Pulmonar", "Farmacia", "Emergencia", "Laboratorio S2", "Hemodinamia"]
 PERSONAL_PAGO = ["Luis Rodríguez", "María Delgado", "Pedro Gómez"]
 PERSONAL_SEGURIDAD = ["Carlos Mendoza", "Juan Pérez", "Ana Martínez"]
@@ -41,7 +32,11 @@ def obtener_saludo_y_fecha():
     fecha_str = f"{dia_nombre}, {ahora.day} de {mes_nombre}"
     return saludo, fecha_str
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def iniciar_traslado(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg_obj = update.message if update.message else update.callback_query.message
+    if update.callback_query:
+        await update.callback_query.answer()
+
     context.user_data['cajas_sel'] = []
     keyboard = []
     for caja in LISTA_CAJAS:
@@ -49,7 +44,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("➡️ Continuar", callback_data="cajas_done")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("🏦 *TRASLADO DE VALORES*\nSeleccione las cajas de origen:", reply_markup=reply_markup, parse_mode="Markdown")
+    await msg_obj.reply_text("🏦 *TRASLADO DE VALORES*\nSeleccione las cajas de origen:", reply_markup=reply_markup, parse_mode="Markdown")
     return CAJAS
 
 async def seleccionar_cajas(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -173,7 +168,6 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
     saludo, fecha_str = obtener_saludo_y_fecha()
     cajas_str = ", ".join(context.user_data['cajas_sel'])
 
-    # Formato final del reporte
     texto_reporte = (
         f"{saludo}\n\n"
         f"🏦 *TRASLADO DE VALORES*\n"
@@ -185,7 +179,6 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
         f"📝 *Novedades:* {novedades}"
     )
 
-    # Generación de la URL de WhatsApp (Deep Link)
     texto_para_whatsapp = texto_reporte.replace('*', '')
     texto_encoded = urllib.parse.quote(texto_para_whatsapp)
     url_whatsapp = f"https://wa.me/?text={texto_encoded}"
@@ -198,39 +191,30 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Reporte cancelado.")
+    await update.message.reply_text("Reporte de Traslado de Valores cancelado.")
     return ConversationHandler.END
 
-if __name__ == '__main__':
-    # Obtiene el Token desde las variables de entorno
-    TOKEN = os.getenv('TELEGRAM_TOKEN')
-    
-    if not TOKEN:
-        raise ValueError("Error: La variable de entorno TELEGRAM_TOKEN no está configurada.")
-
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start), CommandHandler('reporte', start)],
-        states={
-            CAJAS: [CallbackQueryHandler(seleccionar_cajas)],
-            GESTION_PAGO: [
-                CallbackQueryHandler(pedir_gestion_pago),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, guardar_nuevo_nombre)
-            ],
-            SEGURIDAD: [
-                CallbackQueryHandler(pedir_seguridad),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, guardar_nuevo_nombre)
-            ],
-            POLICIA: [CallbackQueryHandler(pedir_novedades)],
-            NOVEDADES: [
-                CallbackQueryHandler(generar_reporte_final),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, generar_reporte_final)
-            ],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)]
-    )
-
-    app.add_handler(conv_handler)
-    print("Bot @ReportPcmBot en marcha...")
-    app.run_polling()
+# Exportación del Handler para ser registrado en Report.py
+traslado_handler = ConversationHandler(
+    entry_points=[
+        CommandHandler('traslado', iniciar_traslado),
+        CallbackQueryHandler(iniciar_traslado, pattern='^iniciar_traslado$')
+    ],
+    states={
+        CAJAS: [CallbackQueryHandler(seleccionar_cajas)],
+        GESTION_PAGO: [
+            CallbackQueryHandler(pedir_gestion_pago),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, guardar_nuevo_nombre)
+        ],
+        SEGURIDAD: [
+            CallbackQueryHandler(pedir_seguridad),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, guardar_nuevo_nombre)
+        ],
+        POLICIA: [CallbackQueryHandler(pedir_novedades)],
+        NOVEDADES: [
+            CallbackQueryHandler(generar_reporte_final),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, generar_reporte_final)
+        ],
+    },
+    fallbacks=[CommandHandler('cancel', cancel)]
+)
