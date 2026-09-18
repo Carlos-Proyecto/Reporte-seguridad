@@ -5,7 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # Importar el handler del archivo trasladovalores.py
-from Traslado_valores import traslado_handler
+from Traslado_valores.py import traslado_handler
 
 # Cargar variables de entorno (.env)
 load_dotenv()
