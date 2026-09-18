@@ -11,8 +11,8 @@ CAJAS, GESTION_PAGO, SEGURIDAD, POLICIA, NOVEDADES = range(5)
 
 # Datos persistentes en memoria (listas maestras)
 LISTA_CAJAS = ["Gestión de Pago", "Cardio Pulmonar", "Farmacia", "Emergencia", "Laboratorio S2", "Hemodinamia"]
-PERSONAL_PAGO = ["Luis Rodríguez", "María Delgado", "Pedro Gómez"]
-PERSONAL_SEGURIDAD = ["Carlos Mendoza", "Juan Pérez", "Ana Martínez"]
+PERSONAL_PAGO = ["Luis Rodríguez", "Yerigar Quintero", "José Pacheco"]
+PERSONAL_SEGURIDAD = ["Walter Fernández y Carlos Serrano", "Walter Fernández y Fernando Páez", "Walter Fernández y Jaime Temprano"]
 
 DÍAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
