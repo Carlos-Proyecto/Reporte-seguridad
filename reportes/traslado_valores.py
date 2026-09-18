@@ -8,12 +8,13 @@ from telegram.ext import (
 )
 
 # Estados de la conversación
-CAJAS, GESTION_PAGO, SEGURIDAD, POLICIA, NOVEDADES = range(5)
+CAJAS, GESTION_PAGO, SEGURIDAD, DESTINO, POLICIA, NOVEDADES = range(6)
 
 # Datos persistentes en memoria (listas maestras)
 LISTA_CAJAS = ["Gestión de Pago", "Cardio Pulmonar", "Farmacia", "Emergencia", "Laboratorio S2", "Hemodinamia"]
 PERSONAL_PAGO = ["Luis Rodríguez", "Yerigar Quintero", "José Pacheco"]
 PERSONAL_SEGURIDAD = ["Walter Fernández y Carlos Serrano", "Walter Fernández y Fernando Páez", "Walter Fernández y Jaime Temprano"]
+DESTINOS_BANCOS = ["Banco Banesco", "Banco Provincial"]
 
 DÍAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
@@ -97,16 +98,19 @@ async def pedir_gestion_pago(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return await mostrar_menu_seguridad(query.message)
 
 async def guardar_nuevo_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    nuevo_nombre = update.message.text.strip()
+    nuevo_texto = update.message.text.strip()
     tipo = context.user_data.get('esperando_nuevo')
 
     if tipo == 'pago':
-        PERSONAL_PAGO.append(nuevo_nombre)
-        context.user_data['personal_pago'] = nuevo_nombre
+        PERSONAL_PAGO.append(nuevo_texto)
+        context.user_data['personal_pago'] = nuevo_texto
         return await mostrar_menu_seguridad(update.message)
     elif tipo == 'seguridad':
-        PERSONAL_SEGURIDAD.append(nuevo_nombre)
-        context.user_data['personal_seguridad'] = nuevo_nombre
+        PERSONAL_SEGURIDAD.append(nuevo_texto)
+        context.user_data['personal_seguridad'] = nuevo_texto
+        return await mostrar_menu_destino(update.message)
+    elif tipo == 'destino':
+        context.user_data['destino'] = nuevo_texto
         return await pedir_policia(update.message)
 
 async def mostrar_menu_seguridad(message):
@@ -126,15 +130,26 @@ async def pedir_seguridad(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return SEGURIDAD
     else:
         context.user_data['personal_seguridad'] = data.replace("seg_", "")
-        return await pedir_policia_query(query)
+        return await mostrar_menu_destino(query.message)
 
-async def pedir_policia_query(query):
-    keyboard = [
-        [InlineKeyboardButton("Sí, con presencia policial", callback_data="policia_Sí")],
-        [InlineKeyboardButton("No, solo personal interno", callback_data="policia_No")]
-    ]
-    await query.message.reply_text("🚓 *¿Contó con la presencia de la Policía en la clínica?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-    return POLICIA
+async def mostrar_menu_destino(message):
+    keyboard = [[InlineKeyboardButton(b, callback_data=f"dest_{b}")] for b in DESTINOS_BANCOS]
+    keyboard.append([InlineKeyboardButton("✍️ Otro destino (Escribir)", callback_data="dest_nuevo")])
+    await message.reply_text("🏦 *¿Cuál fue el destino del traslado?:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    return DESTINO
+
+async def pedir_destino(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+
+    if data == "dest_nuevo":
+        context.user_data['esperando_nuevo'] = 'destino'
+        await query.message.reply_text("Escriba el nombre del destino:")
+        return DESTINO
+    else:
+        context.user_data['destino'] = data.replace("dest_", "")
+        return await pedir_policia(query.message)
 
 async def pedir_policia(message):
     keyboard = [
@@ -175,20 +190,21 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
     cajas_lista = context.user_data['cajas_sel']
     cajas_formateadas = "\n".join([f"- {caja}" for caja in cajas_lista])
 
-    # Construcción del texto respetando negritas (*) para WhatsApp y Telegram
+    # Construcción del texto ajustando cada respuesta a la línea siguiente
     texto_reporte = (
         f"{saludo}\n"
         f"*Reporte de Servicio*\n"
         f"*Traslado de Valores*\n"
         f"{fecha_str}\n\n"
         f"📍 *Cajas Procesadas:*\n{cajas_formateadas}\n"
-        f"👤 *Personal de Gestión de Pago:* {context.user_data['personal_pago']}\n"
-        f"🛡️ *Personal de Seguridad Integral:* {context.user_data['personal_seguridad']}\n"
-        f"🚓 *Presencia Policial en Clínica:* {context.user_data['policia']}\n"
-        f"📝 *Novedades:* {novedades}"
+        f"👤 *Personal de Gestión de Pago:*\n{context.user_data['personal_pago']}\n"
+        f"🛡️ *Personal de Seguridad Integral:*\n{context.user_data['personal_seguridad']}\n"
+        f"🏦 *Destino:*\n{context.user_data['destino']}\n"
+        f"🚓 *Presencia Policial en Clínica:*\n{context.user_data['policia']}\n"
+        f"📝 *Novedades:*\n{novedades}"
     )
 
-    # Codificación para enlace de WhatsApp preservando los asteriscos (*) para formato
+    # Codificación para enlace de WhatsApp
     texto_encoded = urllib.parse.quote(texto_reporte)
     url_whatsapp = f"https://wa.me/?text={texto_encoded}"
 
@@ -217,6 +233,10 @@ traslado_handler = ConversationHandler(
         ],
         SEGURIDAD: [
             CallbackQueryHandler(pedir_seguridad),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, guardar_nuevo_nombre)
+        ],
+        DESTINO: [
+            CallbackQueryHandler(pedir_destino),
             MessageHandler(filters.TEXT & ~filters.COMMAND, guardar_nuevo_nombre)
         ],
         POLICIA: [CallbackQueryHandler(pedir_novedades)],
