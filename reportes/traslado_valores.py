@@ -1,5 +1,6 @@
 import urllib.parse
 from datetime import datetime
+import zoneinfo
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     CommandHandler, CallbackQueryHandler, MessageHandler,
@@ -18,18 +19,21 @@ DÍAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domin
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
 def obtener_saludo_y_fecha():
-    ahora = datetime.now()
+    # Zona horaria de Caracas para corregir desfase en servidor
+    tz = zoneinfo.ZoneInfo("America/Caracas")
+    ahora = datetime.now(tz)
     hora = ahora.hour
+
     if 5 <= hora < 12:
-        saludo = "Buenos días."
+        saludo = "*Buenos días.*"
     elif 12 <= hora < 19:
-        saludo = "Buenas tardes."
+        saludo = "*Buenas tardes.*"
     else:
-        saludo = "Buenas noches."
+        saludo = "*Buenas noches.*"
     
     dia_nombre = DÍAS[ahora.weekday()]
     mes_nombre = MESES[ahora.month - 1]
-    fecha_str = f"{dia_nombre}, {ahora.day} de {mes_nombre}"
+    fecha_str = f"*{dia_nombre}, {ahora.day} de {mes_nombre}*"
     return saludo, fecha_str
 
 async def iniciar_traslado(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -166,21 +170,26 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
         msg_obj = update.message
 
     saludo, fecha_str = obtener_saludo_y_fecha()
-    cajas_str = ", ".join(context.user_data['cajas_sel'])
+    
+    # Formatear las cajas seleccionadas una debajo de otra con guion
+    cajas_lista = context.user_data['cajas_sel']
+    cajas_formateadas = "\n".join([f"- {caja}" for caja in cajas_lista])
 
+    # Construcción del texto respetando negritas (*) para WhatsApp y Telegram
     texto_reporte = (
-        f"{saludo}\n\n"
-        f"🏦 *TRASLADO DE VALORES*\n"
-        f"📅 *{fecha_str}*\n\n"
-        f"📍 *Cajas Procesadas:* {cajas_str}\n"
+        f"{saludo}\n"
+        f"*Reporte de Servicio*\n"
+        f"*Traslado de Valores*\n"
+        f"{fecha_str}\n\n"
+        f"📍 *Cajas Procesadas:*\n{cajas_formateadas}\n"
         f"👤 *Personal de Gestión de Pago:* {context.user_data['personal_pago']}\n"
         f"🛡️ *Personal de Seguridad Integral:* {context.user_data['personal_seguridad']}\n"
         f"🚓 *Presencia Policial en Clínica:* {context.user_data['policia']}\n"
         f"📝 *Novedades:* {novedades}"
     )
 
-    texto_para_whatsapp = texto_reporte.replace('*', '')
-    texto_encoded = urllib.parse.quote(texto_para_whatsapp)
+    # Codificación para enlace de WhatsApp preservando los asteriscos (*) para formato
+    texto_encoded = urllib.parse.quote(texto_reporte)
     url_whatsapp = f"https://wa.me/?text={texto_encoded}"
 
     keyboard = InlineKeyboardMarkup([
@@ -194,7 +203,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Reporte de Traslado de Valores cancelado.")
     return ConversationHandler.END
 
-# Exportación del Handler para ser registrado en Report.py
+# Exportación del Handler
 traslado_handler = ConversationHandler(
     entry_points=[
         CommandHandler('traslado', iniciar_traslado),
