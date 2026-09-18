@@ -4,8 +4,9 @@ from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Importar el handler del archivo trasladovalores.py
+# Importar los handlers desde la carpeta reportes/
 from reportes.traslado_valores import traslado_handler
+from reportes.notificacion_deceso import deceso_handler
 
 # Cargar variables de entorno (.env)
 load_dotenv()
@@ -16,7 +17,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🏦 Traslado de Valores", callback_data="iniciar_traslado")],
-        # Aquí podrás agregar botones para futuros reportes cuando los creemos
+        [InlineKeyboardButton("🕊️ Notificación de Deceso", callback_data="iniciar_deceso")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -24,7 +25,13 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👮‍♂️ *SISTEMA DE REPORTES - GERENCIA DE SEGURIDAD INTEGRAL*\n\n"
         "Bienvenido. Seleccione el tipo de reporte que desea realizar:"
     )
-    await update.message.reply_text(texto, reply_markup=reply_markup, parse_mode="Markdown")
+    
+    # Manejar si el comando viene de un mensaje directo o callback
+    if update.message:
+        await update.message.reply_text(texto, reply_markup=reply_markup, parse_mode="Markdown")
+    elif update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.message.reply_text(texto, reply_markup=reply_markup, parse_mode="Markdown")
 
 if __name__ == '__main__':
     TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -38,9 +45,9 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler('start', start_menu))
     app.add_handler(CommandHandler('menu', start_menu))
 
-    # Registrar el módulo de Traslado de Valores
+    # Registrar los módulos de reportes
     app.add_handler(traslado_handler)
+    app.add_handler(deceso_handler)
 
     print("Bot @ReportPcmBot en marcha desde Report.py...")
     app.run_polling()
-
