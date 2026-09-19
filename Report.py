@@ -7,6 +7,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 # Importar los handlers desde la carpeta reportes/
 from reportes.traslado_valores import traslado_handler
 from reportes.notificacion_deceso import deceso_handler
+from reportes.plantilla_guardia import plantilla_handler
 
 # Cargar variables de entorno (.env)
 load_dotenv()
@@ -18,6 +19,7 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🏦 Traslado de Valores", callback_data="iniciar_traslado")],
         [InlineKeyboardButton("🕊️ Notificación de Deceso", callback_data="iniciar_deceso")],
+        [InlineKeyboardButton("📊 Plantilla de Guardia", callback_data="iniciar_plantilla")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -48,6 +50,7 @@ if __name__ == '__main__':
     # Registrar los módulos de reportes
     app.add_handler(traslado_handler)
     app.add_handler(deceso_handler)
+    app.add_handler(plantilla_handler)
 
     print("Bot @ReportPcmBot en marcha desde Report.py...")
     app.run_polling()
