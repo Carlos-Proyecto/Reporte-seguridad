@@ -8,7 +8,10 @@ from telegram.ext import (
 )
 
 # Estados de la conversación
-NOMBRE, CEDULA, LUGAR, MORGUE, CERTIFICADO, SOLVENCIA, ADICIONAL_PREGUNTA, INFO_ADICIONAL = range(8)
+(
+    NOMBRE, CEDULA, LUGAR, MORGUE, HORA_MORGUE, 
+    CERTIFICADO, SOLVENCIA, ADICIONAL_PREGUNTA, INFO_ADICIONAL
+) = range(9)
 
 # Opciones por defecto para el lugar del deceso
 LUGARES_COMUNES = ["Emergencia", "UCI", "Hospitalización", "Pabellón"]
@@ -89,12 +92,25 @@ async def pedir_morgue(message):
     await message.reply_text("*¿Ingresó o no a la morgue?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return MORGUE
 
-async def pedir_certificado(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def procesar_morgue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    context.user_data['ingreso_morgue'] = query.data.replace("morgue_", "")
+    respuesta = query.data.replace("morgue_", "")
+    
+    if respuesta == "Sí":
+        context.user_data['ingreso_morgue_flag'] = "Sí"
+        await query.message.reply_text("Escriba la *hora de ingreso a la morgue* (ejemplo: 14:30 hrs):", parse_mode="Markdown")
+        return HORA_MORGUE
+    else:
+        context.user_data['ingreso_morgue'] = "No"
+        await query.message.reply_text("Escriba el *Número de Certificado* de defunción:", parse_mode="Markdown")
+        return CERTIFICADO
 
-    await query.message.reply_text("Escriba el *Número de Certificado* de defunción:", parse_mode="Markdown")
+async def recibir_hora_morgue(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    hora_str = update.message.text.strip()
+    context.user_data['ingreso_morgue'] = f"Sí - {hora_str}"
+    
+    await update.message.reply_text("Escriba el *Número de Certificado* de defunción:", parse_mode="Markdown")
     return CERTIFICADO
 
 async def pedir_solvencia(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -130,7 +146,6 @@ async def recibir_info_adicional(update: Update, context: ContextTypes.DEFAULT_T
 async def generar_reporte_final(message_obj, context: ContextTypes.DEFAULT_TYPE):
     saludo, fecha_str = obtener_saludo_y_fecha()
 
-    # Construcción de las líneas base con respuestas al lado
     lineas_reporte = [
         f"{saludo}",
         "*Reporte de Servicio*",
@@ -144,14 +159,12 @@ async def generar_reporte_final(message_obj, context: ContextTypes.DEFAULT_TYPE)
         f"*Persona que da la Solvencia:* {context.user_data['persona_solvencia']}"
     ]
 
-    # Agregar la información adicional si fue indicada
     info_adic = context.user_data.get('info_adicional')
     if info_adic:
         lineas_reporte.append(f"*Información Adicional:* {info_adic}")
 
     texto_reporte = "\n".join(lineas_reporte)
 
-    # Codificación para enlace de WhatsApp
     texto_encoded = urllib.parse.quote(texto_reporte)
     url_whatsapp = f"https://wa.me/?text={texto_encoded}"
 
@@ -179,7 +192,8 @@ deceso_handler = ConversationHandler(
             CallbackQueryHandler(procesar_lugar),
             MessageHandler(filters.TEXT & ~filters.COMMAND, procesar_lugar)
         ],
-        MORGUE: [CallbackQueryHandler(pedir_certificado)],
+        MORGUE: [CallbackQueryHandler(procesar_morgue)],
+        HORA_MORGUE: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_hora_morgue)],
         CERTIFICADO: [MessageHandler(filters.TEXT & ~filters.COMMAND, pedir_solvencia)],
         SOLVENCIA: [MessageHandler(filters.TEXT & ~filters.COMMAND, preguntar_adicional)],
         ADICIONAL_PREGUNTA: [CallbackQueryHandler(respuesta_adicional)],
