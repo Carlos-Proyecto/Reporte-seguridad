@@ -9,15 +9,16 @@ from telegram.ext import (
 
 # Estados de la conversación
 (
+    TIPO_GUARDIA,
     CANT_TITULARES, NOMBRES_TITULARES,
     CANT_ESPECIALES, NOMBRES_ESPECIALES,
     TIENE_LIBRES, CANT_LIBRES, NOMBRES_LIBRES,
     TIENE_AUSENTES, CANT_AUSENTES, NOMBRES_AUSENTES,
     TIENE_VACACIONES, CANT_VACACIONES, NOMBRES_VACACIONES,
-    COORD_JDML, POS_TRANSPORTE_JDML, POS_QUINTA_JDML,
-    POS_REVISION_CSP, POS_SOTANO5_CSP,
+    COORD_JDML, POS_TRANSPORTE_JDML, POS_PROVEEDORES_JDML, POS_QUINTA_JDML, POS_PISO2_JDML, POS_CTRL_PCM_JDML, POS_CTRL_CORTIJOS_JDML,
+    POS_PISO4_CSP, POS_EMERGENCIA_CSP, POS_REVISION_CSP, POS_SOTANO5_CSP,
     NOVEDADES
-) = range(19)
+) = range(26)
 
 DÍAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
@@ -39,7 +40,7 @@ def obtener_saludo_y_fecha():
     fecha_str = f"*{dia_nombre}, {ahora.day} de {mes_nombre}*"
     return saludo, fecha_str
 
-# --- 1. SEGURIDAD INTERNA PCM ---
+# --- INICIO Y TIPO DE GUARDIA ---
 
 async def iniciar_plantilla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_obj = update.message if update.message else update.callback_query.message
@@ -53,13 +54,31 @@ async def iniciar_plantilla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['ausentes'] = []
     context.user_data['vacaciones'] = []
 
+    keyboard = [
+        [InlineKeyboardButton("☀️ Diurna", callback_data="guardia_Diurna")],
+        [InlineKeyboardButton("🌙 Nocturna", callback_data="guardia_Nocturna")]
+    ]
     await msg_obj.reply_text(
-        "*REPORTE DE PLANTILLA*\n\n"
-        "🛡️ *Seguridad Interna PCM*\n"
+        "*REPORTE DE PLANTILLA*\n\nSeleccione el tipo de guardia:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    return TIPO_GUARDIA
+
+async def seleccionar_tipo_guardia(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    tipo = query.data.replace("guardia_", "")
+    context.user_data['tipo_guardia'] = tipo
+
+    await query.message.reply_text(
+        f"🛡️ *Seguridad Interna PCM* ({tipo})\n"
         "Indique la *cantidad de Operadores Titulares* presentes en la guardia (en números):",
         parse_mode="Markdown"
     )
     return CANT_TITULARES
+
+# --- 1. SEGURIDAD INTERNA PCM ---
 
 async def recibir_cant_titulares(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = update.message.text.strip()
@@ -73,7 +92,7 @@ async def recibir_cant_titulares(update: Update, context: ContextTypes.DEFAULT_T
         return await pedir_cant_especiales(update)
     
     context.user_data['idx_titular'] = 1
-    await update.message.reply_text(f"Escriba el Nombre y Apellido del *Titular 1*:", parse_mode="Markdown")
+    await update.message.reply_text("Escriba el Nombre y Apellido del *Titular 1*:", parse_mode="Markdown")
     return NOMBRES_TITULARES
 
 async def recibir_nombre_titular(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -105,7 +124,7 @@ async def recibir_cant_especiales(update: Update, context: ContextTypes.DEFAULT_
         return await preguntar_libres(update)
     
     context.user_data['idx_especial'] = 1
-    await update.message.reply_text(f"Escriba el Nombre y Apellido de la *Guardia Especial 1*:", parse_mode="Markdown")
+    await update.message.reply_text("Escriba el Nombre y Apellido de la *Guardia Especial 1*:", parse_mode="Markdown")
     return NOMBRES_ESPECIALES
 
 async def recibir_nombre_especial(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -255,24 +274,69 @@ async def pedir_coord_jdml(message):
 
 async def recibir_coord_jdml(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['coord_jdml'] = update.message.text.strip()
-    await update.message.reply_text("Escriba el Nombre y Apellido del oficial en la posición de *Transporte*:", parse_mode="Markdown")
+    await update.message.reply_text("Escriba el Nombre y Apellido en *Transporte*:", parse_mode="Markdown")
     return POS_TRANSPORTE_JDML
 
 async def recibir_transporte_jdml(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['transporte_jdml'] = update.message.text.strip()
-    await update.message.reply_text("Escriba el Nombre y Apellido del oficial en la posición de *Quinta Fides*:", parse_mode="Markdown")
-    return POS_QUINTA_JDML
+    
+    # Si es guardia Diurna, pedimos Proveedores; si es Nocturna, pasamos directo a Quinta Fides
+    if context.user_data.get('tipo_guardia') == "Diurna":
+        await update.message.reply_text("Escriba el Nombre y Apellido en *Proveedores*:", parse_mode="Markdown")
+        return POS_PROVEEDORES_JDML
+    else:
+        await update.message.reply_text("Escriba el Nombre y Apellido en *Quinta Fides*:", parse_mode="Markdown")
+        return POS_QUINTA_JDML
 
-# --- 3. EMPRESA CSP 24/7 ---
+async def recibir_proveedores_jdml(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['proveedores_jdml'] = update.message.text.strip()
+    await update.message.reply_text("Escriba el Nombre y Apellido en *Quinta Fides*:", parse_mode="Markdown")
+    return POS_QUINTA_JDML
 
 async def recibir_quinta_jdml(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['quinta_jdml'] = update.message.text.strip()
-    await update.message.reply_text("🛡️ *EMPRESA CSP 24/7*\n\nEscriba el Nombre y Apellido del oficial en la posición de *Revisión*:", parse_mode="Markdown")
+    
+    # Si es Diurna, continuamos con las posiciones diurnas restantes de JDML
+    if context.user_data.get('tipo_guardia') == "Diurna":
+        await update.message.reply_text("Escriba el Nombre y Apellido en *Piso 2*:", parse_mode="Markdown")
+        return POS_PISO2_JDML
+    else:
+        # Si es Nocturna, pasamos a CSP 24/7 (Revisión)
+        await update.message.reply_text("🛡️ *EMPRESA CSP 24/7*\n\nEscriba el Nombre y Apellido en *Revisión*:", parse_mode="Markdown")
+        return POS_REVISION_CSP
+
+async def recibir_piso2_jdml(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['piso2_jdml'] = update.message.text.strip()
+    await update.message.reply_text("Escriba el Nombre y Apellido en *Controlador PCM*:", parse_mode="Markdown")
+    return POS_CTRL_PCM_JDML
+
+async def recibir_ctrl_pcm_jdml(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['ctrl_pcm_jdml'] = update.message.text.strip()
+    await update.message.reply_text("Escriba el Nombre y Apellido en *Controlador Los Cortijos*:", parse_mode="Markdown")
+    return POS_CTRL_CORTIJOS_JDML
+
+# --- 3. EMPRESA CSP 24/7 ---
+
+async def recibir_ctrl_cortijos_jdml(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['ctrl_cortijos_jdml'] = update.message.text.strip()
+    
+    # Para guardia Diurna, CSP inicia en Piso 4
+    await update.message.reply_text("🛡️ *EMPRESA CSP 24/7*\n\nEscriba el Nombre y Apellido en *Piso 4*:", parse_mode="Markdown")
+    return POS_PISO4_CSP
+
+async def recibir_piso4_csp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['piso4_csp'] = update.message.text.strip()
+    await update.message.reply_text("Escriba el Nombre y Apellido en *Emergencia*:", parse_mode="Markdown")
+    return POS_EMERGENCIA_CSP
+
+async def recibir_emergencia_csp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['emergencia_csp'] = update.message.text.strip()
+    await update.message.reply_text("Escriba el Nombre y Apellido en *Revisión*:", parse_mode="Markdown")
     return POS_REVISION_CSP
 
 async def recibir_revision_csp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['revision_csp'] = update.message.text.strip()
-    await update.message.reply_text("Escriba el Nombre y Apellido del oficial en la posición de *Sótano 5*:", parse_mode="Markdown")
+    await update.message.reply_text("Escriba el Nombre y Apellido en *Sótano 5*:", parse_mode="Markdown")
     return POS_SOTANO5_CSP
 
 # --- NOVEDADES Y REPORTE FINAL ---
@@ -301,11 +365,12 @@ async def generar_reporte_plantilla(update: Update, context: ContextTypes.DEFAUL
         msg_obj = update.message
 
     saludo, fecha_str = obtener_saludo_y_fecha()
+    tipo_guardia = context.user_data.get('tipo_guardia', 'Diurna')
 
     def fmt_lista(lista):
         return "\n".join([f"- {nombre}" for nombre in lista])
 
-    # Construir la sección de PCM dinámicamente según si existen integrantes
+    # Bloques PCM
     pcm_bloques = []
 
     titulares = context.user_data.get('titulares', [])
@@ -332,20 +397,51 @@ async def generar_reporte_plantilla(update: Update, context: ContextTypes.DEFAUL
 
     pcm_seccion = "\n\n".join(pcm_bloques)
 
+    # Construir JDML según tipo de guardia (Nombres al lado de la posición)
+    if tipo_guardia == "Diurna":
+        jdml_seccion = (
+            f"🛡️ *EMPRESA JDML*\n"
+            f"*Coordinador:* {context.user_data.get('coord_jdml')}\n"
+            f"*Transporte:* {context.user_data.get('transporte_jdml')}\n"
+            f"*Proveedores:* {context.user_data.get('proveedores_jdml')}\n"
+            f"*Quinta Fides:* {context.user_data.get('quinta_jdml')}\n"
+            f"*Piso 2:* {context.user_data.get('piso2_jdml')}\n"
+            f"*Controlador PCM:* {context.user_data.get('ctrl_pcm_jdml')}\n"
+            f"*Controlador Los Cortijos:* {context.user_data.get('ctrl_cortijos_jdml')}"
+        )
+    else:
+        jdml_seccion = (
+            f"🛡️ *EMPRESA JDML*\n"
+            f"*Coordinador:* {context.user_data.get('coord_jdml')}\n"
+            f"*Transporte:* {context.user_data.get('transporte_jdml')}\n"
+            f"*Quinta Fides:* {context.user_data.get('quinta_jdml')}"
+        )
+
+    # Construir CSP 24/7 según tipo de guardia (Nombres al lado de la posición)
+    if tipo_guardia == "Diurna":
+        csp_seccion = (
+            f"🛡️ *EMPRESA CSP 24/7*\n"
+            f"*Piso 4:* {context.user_data.get('piso4_csp')}\n"
+            f"*Emergencia:* {context.user_data.get('emergencia_csp')}\n"
+            f"*Revisión:* {context.user_data.get('revision_csp')}\n"
+            f"*Sótano 5:* {context.user_data.get('sotano5_csp')}"
+        )
+    else:
+        csp_seccion = (
+            f"🛡️ *EMPRESA CSP 24/7*\n"
+            f"*Revisión:* {context.user_data.get('revision_csp')}\n"
+            f"*Sótano 5:* {context.user_data.get('sotano5_csp')}"
+        )
+
     texto_reporte = (
         f"{saludo}\n"
         f"*Reporte de Servicio*\n"
-        f"*Plantilla de Guardia*\n"
+        f"*Plantilla de Guardia {tipo_guardia}*\n"
         f"{fecha_str}\n\n"
         f"🛡️ *SEGURIDAD INTERNA PCM*\n"
         f"{pcm_seccion}\n\n"
-        f"🛡️ *EMPRESA JDML*\n"
-        f"*Coordinador:*\n{context.user_data.get('coord_jdml')}\n"
-        f"*Transporte:*\n{context.user_data.get('transporte_jdml')}\n"
-        f"*Quinta Fides:*\n{context.user_data.get('quinta_jdml')}\n\n"
-        f"🛡️ *EMPRESA CSP 24/7*\n"
-        f"*Revisión:*\n{context.user_data.get('revision_csp')}\n"
-        f"*Sótano 5:*\n{context.user_data.get('sotano5_csp')}\n\n"
+        f"{jdml_seccion}\n\n"
+        f"{csp_seccion}\n\n"
         f"*Novedades en Recepción:*\n{novedades}"
     )
 
@@ -370,6 +466,7 @@ plantilla_handler = ConversationHandler(
         CallbackQueryHandler(iniciar_plantilla, pattern='^iniciar_plantilla$')
     ],
     states={
+        TIPO_GUARDIA: [CallbackQueryHandler(seleccionar_tipo_guardia)],
         CANT_TITULARES: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_cant_titulares)],
         NOMBRES_TITULARES: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_nombre_titular)],
         CANT_ESPECIALES: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_cant_especiales)],
@@ -385,7 +482,13 @@ plantilla_handler = ConversationHandler(
         NOMBRES_VACACIONES: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_nombre_vacacion)],
         COORD_JDML: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_coord_jdml)],
         POS_TRANSPORTE_JDML: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_transporte_jdml)],
+        POS_PROVEEDORES_JDML: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_proveedores_jdml)],
         POS_QUINTA_JDML: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_quinta_jdml)],
+        POS_PISO2_JDML: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_piso2_jdml)],
+        POS_CTRL_PCM_JDML: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_ctrl_pcm_jdml)],
+        POS_CTRL_CORTIJOS_JDML: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_ctrl_cortijos_jdml)],
+        POS_PISO4_CSP: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_piso4_csp)],
+        POS_EMERGENCIA_CSP: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_emergencia_csp)],
         POS_REVISION_CSP: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_revision_csp)],
         POS_SOTANO5_CSP: [MessageHandler(filters.TEXT & ~filters.COMMAND, pedir_novedades_plantilla)],
         NOVEDADES: [
