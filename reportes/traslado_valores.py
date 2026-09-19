@@ -7,8 +7,8 @@ from telegram.ext import (
     filters, ContextTypes, ConversationHandler
 )
 
-# Estados de la conversación
-CAJAS, GESTION_PAGO, SEGURIDAD, DESTINO, POLICIA, NOVEDADES = range(6)
+# Estados de la conversación (Se incluyó HORA)
+CAJAS, HORA, GESTION_PAGO, SEGURIDAD, DESTINO, POLICIA, NOVEDADES = range(7)
 
 # Datos persistentes en memoria (listas maestras)
 LISTA_CAJAS = ["Gestión de Pago", "Cardio Pulmonar", "Farmacia", "Emergencia", "Laboratorio S2", "Hemodinamia"]
@@ -79,10 +79,17 @@ async def seleccionar_cajas(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("Debe seleccionar al menos una caja.", show_alert=True)
             return CAJAS
 
-        keyboard = [[InlineKeyboardButton(p, callback_data=f"pago_{p}")] for p in PERSONAL_PAGO]
-        keyboard.append([InlineKeyboardButton("Agregar nuevo personal", callback_data="pago_nuevo")])
-        await query.message.reply_text("*Personal de Gestión de Pago:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-        return GESTION_PAGO
+        # Pregunta la hora del traslado
+        await query.message.reply_text("Escriba la *hora del traslado* (ejemplo: 10:30 am):", parse_mode="Markdown")
+        return HORA
+
+async def pedir_hora(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['hora_traslado'] = update.message.text.strip()
+    
+    keyboard = [[InlineKeyboardButton(p, callback_data=f"pago_{p}")] for p in PERSONAL_PAGO]
+    keyboard.append([InlineKeyboardButton("Agregar nuevo personal", callback_data="pago_nuevo")])
+    await update.message.reply_text("*Personal de Gestión de Pago:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    return GESTION_PAGO
 
 async def pedir_gestion_pago(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -190,12 +197,13 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
     cajas_lista = context.user_data['cajas_sel']
     cajas_formateadas = "\n".join([f"- {caja}" for caja in cajas_lista])
 
-    # Construcción del texto respetando negritas y con línea libre tras las cajas
+    # Construcción del texto respetando negritas, hora agregada y espacio tras las cajas
     texto_reporte = (
         f"{saludo}\n"
         f"*Reporte de Servicio*\n"
         f"*Traslado de Valores*\n"
-        f"{fecha_str}\n\n"
+        f"{fecha_str}\n"
+        f"*Hora:* {context.user_data.get('hora_traslado', 'N/I')}\n\n"
         f"*Cajas Procesadas:*\n{cajas_formateadas}\n\n"
         f"*Personal de Gestión de Pago:*\n{context.user_data['personal_pago']}\n"
         f"*Personal de Seguridad Integral:*\n{context.user_data['personal_seguridad']}\n"
@@ -227,6 +235,7 @@ traslado_handler = ConversationHandler(
     ],
     states={
         CAJAS: [CallbackQueryHandler(seleccionar_cajas)],
+        HORA: [MessageHandler(filters.TEXT & ~filters.COMMAND, pedir_hora)],
         GESTION_PAGO: [
             CallbackQueryHandler(pedir_gestion_pago),
             MessageHandler(filters.TEXT & ~filters.COMMAND, guardar_nuevo_nombre)
