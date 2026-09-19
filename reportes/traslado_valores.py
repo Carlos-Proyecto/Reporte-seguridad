@@ -7,7 +7,7 @@ from telegram.ext import (
     filters, ContextTypes, ConversationHandler
 )
 
-# Estados de la conversación (Se incluyó HORA)
+# Estados de la conversación
 CAJAS, HORA, GESTION_PAGO, SEGURIDAD, DESTINO, POLICIA, NOVEDADES = range(7)
 
 # Datos persistentes en memoria (listas maestras)
@@ -175,7 +175,7 @@ async def pedir_novedades(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Sin novedades / Procedimiento exitoso", callback_data="nov_Sin novedades")],
         [InlineKeyboardButton("Registrar Novedad", callback_data="nov_registrar")]
     ]
-    await message.reply_text("*¿Ocurrió alguna novedad durante el acompañamiento?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await query.message.reply_text("*¿Ocurrió alguna novedad durante el acompañamiento?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return NOVEDADES
 
 async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TYPE):
