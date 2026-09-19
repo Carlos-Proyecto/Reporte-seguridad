@@ -54,7 +54,7 @@ async def iniciar_plantilla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['vacaciones'] = []
 
     await msg_obj.reply_text(
-        "📊 *REPORTE DE PLANTILLA*\n\n"
+        "*REPORTE DE PLANTILLA*\n\n"
         "🛡️ *Seguridad Interna PCM*\n"
         "Indique la *cantidad de Operadores Titulares* presentes en la guardia (en números):",
         parse_mode="Markdown"
@@ -250,7 +250,7 @@ async def recibir_nombre_vacacion(update: Update, context: ContextTypes.DEFAULT_
 # --- 2. EMPRESA JDML ---
 
 async def pedir_coord_jdml(message):
-    await message.reply_text("🏢 *EMPRESA JDML*\n\nEscriba el Nombre y Apellido del *Coordinador*:", parse_mode="Markdown")
+    await message.reply_text("🛡️ *EMPRESA JDML*\n\nEscriba el Nombre y Apellido del *Coordinador*:", parse_mode="Markdown")
     return COORD_JDML
 
 async def recibir_coord_jdml(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -284,7 +284,7 @@ async def pedir_novedades_plantilla(update: Update, context: ContextTypes.DEFAUL
         [InlineKeyboardButton("Sin novedades en la recepción", callback_data="nov_Sin novedades en la recepción de la guardia.")],
         [InlineKeyboardButton("Registrar Novedad", callback_data="nov_registrar")]
     ]
-    await update.message.reply_text("📝 *¿Existe alguna novedad en el momento de la recepción de la guardia?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await update.message.reply_text("*¿Existe alguna novedad en el momento de la recepción de la guardia?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return NOVEDADES
 
 async def generar_reporte_plantilla(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -302,17 +302,35 @@ async def generar_reporte_plantilla(update: Update, context: ContextTypes.DEFAUL
 
     saludo, fecha_str = obtener_saludo_y_fecha()
 
-    # Formatear listas
     def fmt_lista(lista):
-        if not lista:
-            return "Ninguno"
         return "\n".join([f"- {nombre}" for nombre in lista])
 
-    titulares_str = fmt_lista(context.user_data.get('titulares', []))
-    especiales_str = fmt_lista(context.user_data.get('especiales', []))
-    libres_str = fmt_lista(context.user_data.get('libres', []))
-    ausentes_str = fmt_lista(context.user_data.get('ausentes', []))
-    vacaciones_str = fmt_lista(context.user_data.get('vacaciones', []))
+    # Construir la sección de PCM dinámicamente según si existen integrantes
+    pcm_bloques = []
+
+    titulares = context.user_data.get('titulares', [])
+    if titulares:
+        pcm_bloques.append(f"*Operadores Titulares Presentes:*\n{fmt_lista(titulares)}")
+    else:
+        pcm_bloques.append("*Operadores Titulares Presentes:*\n- Ninguno")
+
+    especiales = context.user_data.get('especiales', [])
+    if especiales:
+        pcm_bloques.append(f"*Guardias Especiales:*\n{fmt_lista(especiales)}")
+
+    libres = context.user_data.get('libres', [])
+    if libres:
+        pcm_bloques.append(f"*Personal Libre:*\n{fmt_lista(libres)}")
+
+    ausentes = context.user_data.get('ausentes', [])
+    if ausentes:
+        pcm_bloques.append(f"*Personal Ausente:*\n{fmt_lista(ausentes)}")
+
+    vacaciones = context.user_data.get('vacaciones', [])
+    if vacaciones:
+        pcm_bloques.append(f"*Personal de Vacaciones:*\n{fmt_lista(vacaciones)}")
+
+    pcm_seccion = "\n\n".join(pcm_bloques)
 
     texto_reporte = (
         f"{saludo}\n"
@@ -320,19 +338,15 @@ async def generar_reporte_plantilla(update: Update, context: ContextTypes.DEFAUL
         f"*Plantilla de Guardia*\n"
         f"{fecha_str}\n\n"
         f"🛡️ *SEGURIDAD INTERNA PCM*\n"
-        f"👤 *Operadores Titulares Presentes:*\n{titulares_str}\n"
-        f"⭐ *Guardias Especiales:*\n{especiales_str}\n"
-        f"🟢 *Personal Libre:*\n{libres_str}\n"
-        f"🔴 *Personal Ausente:*\n{ausentes_str}\n"
-        f"🏖️ *Personal de Vacaciones:*\n{vacaciones_str}\n\n"
-        f"🏢 *EMPRESA JDML*\n"
-        f"👨‍💼 *Coordinador:*\n{context.user_data.get('coord_jdml')}\n"
-        f"🚘 *Transporte:*\n{context.user_data.get('transporte_jdml')}\n"
-        f"🏛️ *Quinta Fides:*\n{context.user_data.get('quinta_jdml')}\n\n"
+        f"{pcm_seccion}\n\n"
+        f"🛡️ *EMPRESA JDML*\n"
+        f"*Coordinador:*\n{context.user_data.get('coord_jdml')}\n"
+        f"*Transporte:*\n{context.user_data.get('transporte_jdml')}\n"
+        f"*Quinta Fides:*\n{context.user_data.get('quinta_jdml')}\n\n"
         f"🛡️ *EMPRESA CSP 24/7*\n"
-        f"🔍 *Revisión:*\n{context.user_data.get('revision_csp')}\n"
-        f"🅿️ *Sótano 5:*\n{context.user_data.get('sotano5_csp')}\n\n"
-        f"📝 *Novedades en Recepción:*\n{novedades}"
+        f"*Revisión:*\n{context.user_data.get('revision_csp')}\n"
+        f"*Sótano 5:*\n{context.user_data.get('sotano5_csp')}\n\n"
+        f"*Novedades en Recepción:*\n{novedades}"
     )
 
     texto_encoded = urllib.parse.quote(texto_reporte)
