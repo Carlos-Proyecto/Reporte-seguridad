@@ -45,11 +45,11 @@ async def iniciar_traslado(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['cajas_sel'] = []
     keyboard = []
     for caja in LISTA_CAJAS:
-        keyboard.append([InlineKeyboardButton(f"⬜ {caja}", callback_data=f"caja_{caja}")])
-    keyboard.append([InlineKeyboardButton("➡️ Continuar", callback_data="cajas_done")])
+        keyboard.append([InlineKeyboardButton(f"[  ] {caja}", callback_data=f"caja_{caja}")])
+    keyboard.append([InlineKeyboardButton("Continuar", callback_data="cajas_done")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await msg_obj.reply_text("🏦 *TRASLADO DE VALORES*\nSeleccione las cajas de origen:", reply_markup=reply_markup, parse_mode="Markdown")
+    await msg_obj.reply_text("*TRASLADO DE VALORES*\nSeleccione las cajas de origen:", reply_markup=reply_markup, parse_mode="Markdown")
     return CAJAS
 
 async def seleccionar_cajas(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -68,9 +68,9 @@ async def seleccionar_cajas(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         for c in LISTA_CAJAS:
-            marcado = "✅" if c in cajas_sel else "⬜"
+            marcado = "[X]" if c in cajas_sel else "[  ]"
             keyboard.append([InlineKeyboardButton(f"{marcado} {c}", callback_data=f"caja_{c}")])
-        keyboard.append([InlineKeyboardButton("➡️ Continuar", callback_data="cajas_done")])
+        keyboard.append([InlineKeyboardButton("Continuar", callback_data="cajas_done")])
         await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup(keyboard))
         return CAJAS
 
@@ -80,8 +80,8 @@ async def seleccionar_cajas(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return CAJAS
 
         keyboard = [[InlineKeyboardButton(p, callback_data=f"pago_{p}")] for p in PERSONAL_PAGO]
-        keyboard.append([InlineKeyboardButton("➕ Agregar nuevo personal", callback_data="pago_nuevo")])
-        await query.message.reply_text("👤 *Personal de Gestión de Pago:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        keyboard.append([InlineKeyboardButton("Agregar nuevo personal", callback_data="pago_nuevo")])
+        await query.message.reply_text("*Personal de Gestión de Pago:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         return GESTION_PAGO
 
 async def pedir_gestion_pago(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -115,8 +115,8 @@ async def guardar_nuevo_nombre(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def mostrar_menu_seguridad(message):
     keyboard = [[InlineKeyboardButton(s, callback_data=f"seg_{s}")] for s in PERSONAL_SEGURIDAD]
-    keyboard.append([InlineKeyboardButton("➕ Agregar nuevo oficial", callback_data="seg_nuevo")])
-    await message.reply_text("🛡️ *Personal de Seguridad Integral:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    keyboard.append([InlineKeyboardButton("Agregar nuevo oficial", callback_data="seg_nuevo")])
+    await message.reply_text("*Personal de Seguridad Integral:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return SEGURIDAD
 
 async def pedir_seguridad(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -134,8 +134,8 @@ async def pedir_seguridad(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def mostrar_menu_destino(message):
     keyboard = [[InlineKeyboardButton(b, callback_data=f"dest_{b}")] for b in DESTINOS_BANCOS]
-    keyboard.append([InlineKeyboardButton("✍️ Otro destino (Escribir)", callback_data="dest_nuevo")])
-    await message.reply_text("🏦 *¿Cuál fue el destino del traslado?:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    keyboard.append([InlineKeyboardButton("Otro destino (Escribir)", callback_data="dest_nuevo")])
+    await message.reply_text("*¿Cuál fue el destino del traslado?:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return DESTINO
 
 async def pedir_destino(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -156,7 +156,7 @@ async def pedir_policia(message):
         [InlineKeyboardButton("Sí, con presencia policial", callback_data="policia_Sí")],
         [InlineKeyboardButton("No, solo personal interno", callback_data="policia_No")]
     ]
-    await message.reply_text("🚓 *¿Contó con la presencia de la Policía en la clínica?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await message.reply_text("*¿Contó con la presencia de la Policía en la clínica?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return POLICIA
 
 async def pedir_novedades(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -168,7 +168,7 @@ async def pedir_novedades(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Sin novedades / Procedimiento exitoso", callback_data="nov_Sin novedades")],
         [InlineKeyboardButton("Registrar Novedad", callback_data="nov_registrar")]
     ]
-    await query.message.reply_text("📝 *¿Ocurrió alguna novedad durante el acompañamiento?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await query.message.reply_text("*¿Ocurrió alguna novedad durante el acompañamiento?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return NOVEDADES
 
 async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -190,18 +190,18 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
     cajas_lista = context.user_data['cajas_sel']
     cajas_formateadas = "\n".join([f"- {caja}" for caja in cajas_lista])
 
-    # Construcción del texto ajustando cada respuesta a la línea siguiente
+    # Construcción del texto respetando negritas y con línea libre tras las cajas
     texto_reporte = (
         f"{saludo}\n"
         f"*Reporte de Servicio*\n"
         f"*Traslado de Valores*\n"
         f"{fecha_str}\n\n"
-        f"📍 *Cajas Procesadas:*\n{cajas_formateadas}\n"
-        f"👤 *Personal de Gestión de Pago:*\n{context.user_data['personal_pago']}\n"
-        f"🛡️ *Personal de Seguridad Integral:*\n{context.user_data['personal_seguridad']}\n"
-        f"🏦 *Destino:*\n{context.user_data['destino']}\n"
-        f"🚓 *Presencia Policial en Clínica:*\n{context.user_data['policia']}\n"
-        f"📝 *Novedades:*\n{novedades}"
+        f"*Cajas Procesadas:*\n{cajas_formateadas}\n\n"
+        f"*Personal de Gestión de Pago:*\n{context.user_data['personal_pago']}\n"
+        f"*Personal de Seguridad Integral:*\n{context.user_data['personal_seguridad']}\n"
+        f"*Destino:*\n{context.user_data['destino']}\n"
+        f"*Presencia Policial en Clínica:*\n{context.user_data['policia']}\n"
+        f"*Novedades:*\n{novedades}"
     )
 
     # Codificación para enlace de WhatsApp
@@ -209,10 +209,10 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
     url_whatsapp = f"https://wa.me/?text={texto_encoded}"
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📲 Compartir en WhatsApp", url=url_whatsapp)]
+        [InlineKeyboardButton("Compartir en WhatsApp", url=url_whatsapp)]
     ])
 
-    await msg_obj.reply_text(f"📋 *REPORTE GENERADO:*\n\n{texto_reporte}", reply_markup=keyboard, parse_mode="Markdown")
+    await msg_obj.reply_text(f"*REPORTE GENERADO:*\n\n{texto_reporte}", reply_markup=keyboard, parse_mode="Markdown")
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
