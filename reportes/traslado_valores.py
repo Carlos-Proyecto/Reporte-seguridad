@@ -175,7 +175,7 @@ async def pedir_novedades(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Sin novedades / Procedimiento exitoso", callback_data="nov_Sin novedades")],
         [InlineKeyboardButton("Registrar Novedad", callback_data="nov_registrar")]
     ]
-    await query.message.reply_text("*¿Ocurrió alguna novedad durante el acompañamiento?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await message.reply_text("*¿Ocurrió alguna novedad durante el acompañamiento?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
     return NOVEDADES
 
 async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -197,17 +197,17 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
     cajas_lista = context.user_data['cajas_sel']
     cajas_formateadas = "\n".join([f"- {caja}" for caja in cajas_lista])
 
-    # Construcción del texto respetando negritas, hora agregada y espacio tras las cajas
+    # Construcción del texto con la hora tras el destino
     texto_reporte = (
         f"{saludo}\n"
         f"*Reporte de Servicio*\n"
         f"*Traslado de Valores*\n"
-        f"{fecha_str}\n"
-        f"*Hora:* {context.user_data.get('hora_traslado', 'N/I')}\n\n"
+        f"{fecha_str}\n\n"
         f"*Cajas Procesadas:*\n{cajas_formateadas}\n\n"
         f"*Personal de Gestión de Pago:*\n{context.user_data['personal_pago']}\n"
         f"*Personal de Seguridad Integral:*\n{context.user_data['personal_seguridad']}\n"
         f"*Destino:*\n{context.user_data['destino']}\n"
+        f"*Hora del Traslado:*\n{context.user_data.get('hora_traslado', 'N/I')}\n"
         f"*Presencia Policial en Clínica:*\n{context.user_data['policia']}\n"
         f"*Novedades:*\n{novedades}"
     )
