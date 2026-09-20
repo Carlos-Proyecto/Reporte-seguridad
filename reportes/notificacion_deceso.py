@@ -20,7 +20,6 @@ DÍAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domin
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
 def obtener_saludo_y_fecha():
-    # Zona horaria de Caracas para corregir desfase en servidor
     tz = zoneinfo.ZoneInfo("America/Caracas")
     ahora = datetime.now(tz)
     hora = ahora.hour
@@ -38,14 +37,14 @@ def obtener_saludo_y_fecha():
     return saludo, fecha_str
 
 async def iniciar_deceso(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg_obj = update.message if update.message else update.callback_query.message
+    texto = "*NOTIFICACIÓN DE DECESO*\n\nPor favor, escriba el *Nombre y Apellido* del paciente:"
+    
     if update.callback_query:
         await update.callback_query.answer()
-
-    await msg_obj.reply_text(
-        "*NOTIFICACIÓN DE DECESO*\n\nPor favor, escriba el *Nombre y Apellido* del paciente:",
-        parse_mode="Markdown"
-    )
+        await update.callback_query.message.reply_text(texto, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(texto, parse_mode="Markdown")
+        
     return NOMBRE
 
 async def pedir_cedula(update: Update, context: ContextTypes.DEFAULT_TYPE):
