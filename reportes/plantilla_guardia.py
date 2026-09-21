@@ -449,7 +449,8 @@ async def generar_reporte_plantilla(update: Update, context: ContextTypes.DEFAUL
     url_whatsapp = f"https://wa.me/?text={texto_encoded}"
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📲 Compartir en WhatsApp", url=url_whatsapp)]
+        [InlineKeyboardButton("Compartir en WhatsApp", url=url_whatsapp)],
+        [InlineKeyboardButton("Nuevo Reporte", callback_data="volver_menu")]
     ])
 
     await msg_obj.reply_text(f"📋 *REPORTE GENERADO:*\n\n{texto_reporte}", reply_markup=keyboard, parse_mode="Markdown")
