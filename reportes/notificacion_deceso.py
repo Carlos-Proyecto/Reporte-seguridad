@@ -7,11 +7,11 @@ from telegram.ext import (
     filters, ContextTypes, ConversationHandler
 )
 
-# Estados de la conversación
+# Estados de la conversación (Se incluyó EDAD)
 (
-    NOMBRE, CEDULA, LUGAR, MORGUE, HORA_MORGUE, 
+    NOMBRE, CEDULA, EDAD, LUGAR, MORGUE, HORA_MORGUE, 
     CERTIFICADO, SOLVENCIA, ADICIONAL_PREGUNTA, INFO_ADICIONAL
-) = range(9)
+) = range(10)
 
 # Opciones por defecto para el lugar del deceso
 LUGARES_COMUNES = ["Emergencia", "UCI", "Hospitalización", "Pabellón"]
@@ -52,8 +52,13 @@ async def pedir_cedula(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Escriba la *Cédula de Identidad* del paciente:", parse_mode="Markdown")
     return CEDULA
 
-async def pedir_lugar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def pedir_edad(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['cedula_paciente'] = update.message.text.strip()
+    await update.message.reply_text("Escriba la *Edad* del paciente:", parse_mode="Markdown")
+    return EDAD
+
+async def pedir_lugar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['edad_paciente'] = update.message.text.strip()
     
     keyboard = [[InlineKeyboardButton(lugar, callback_data=f"lugar_{lugar}")] for lugar in LUGARES_COMUNES]
     keyboard.append([InlineKeyboardButton("Otro lugar (Escribir)", callback_data="lugar_otro")])
@@ -152,6 +157,7 @@ async def generar_reporte_final(message_obj, context: ContextTypes.DEFAULT_TYPE)
         f"{fecha_str}\n",
         f"*Nombre y Apellido:* {context.user_data['nombre_paciente']}",
         f"*Cédula de Identidad:* {context.user_data['cedula_paciente']}",
+        f"*Edad:* {context.user_data['edad_paciente']}",
         f"*Lugar del Deceso:* {context.user_data['lugar_deceso']}",
         f"*Ingreso a la Morgue:* {context.user_data['ingreso_morgue']}",
         f"*Número de Certificado:* {context.user_data['num_certificado']}",
@@ -186,7 +192,8 @@ deceso_handler = ConversationHandler(
     ],
     states={
         NOMBRE: [MessageHandler(filters.TEXT & ~filters.COMMAND, pedir_cedula)],
-        CEDULA: [MessageHandler(filters.TEXT & ~filters.COMMAND, pedir_lugar)],
+        CEDULA: [MessageHandler(filters.TEXT & ~filters.COMMAND, pedir_edad)],
+        EDAD: [MessageHandler(filters.TEXT & ~filters.COMMAND, pedir_lugar)],
         LUGAR: [
             CallbackQueryHandler(procesar_lugar),
             MessageHandler(filters.TEXT & ~filters.COMMAND, procesar_lugar)
