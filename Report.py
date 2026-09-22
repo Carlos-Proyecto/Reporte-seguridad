@@ -7,23 +7,28 @@ from telegram.ext import (
 )
 
 # Importar los handlers desde la carpeta reportes/
-from reportes.traslado_valores import traslado_handler
-from reportes.notificacion_deceso import deceso_handler
 from reportes.acta_emergencia import acta_handler
+from reportes.bienes_hallados import bienes_hallados_handler
+from reportes.entrega_cadaver import entrega_cadaver_handler
+from reportes.notificacion_deceso import deceso_handler
 from reportes.plantilla_guardia import plantilla_handler
-from reportes.entrega_cadaver import entrega_cadaver_handler  # <--- NUEVA IMPORTACIÓN
+from reportes.traslado_valores import traslado_handler
 
+# Cargar variables de entorno (.env)
 load_dotenv()
 
+# Configuración de logs
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Botones ordenados alfabéticamente
     keyboard = [
-        [InlineKeyboardButton("Traslado de Valores", callback_data="iniciar_traslado")],
-        [InlineKeyboardButton("Notificación de Deceso", callback_data="iniciar_deceso")],
-        [InlineKeyboardButton("Entrega de Cadáver", callback_data="iniciar_entrega")],  # <--- NUEVA OPCIÓN
         [InlineKeyboardButton("Acta de Emergencia", callback_data="iniciar_acta")],
+        [InlineKeyboardButton("Bienes Hallados", callback_data="iniciar_bienes")],
+        [InlineKeyboardButton("Entrega de Cadáver", callback_data="iniciar_entrega")],
+        [InlineKeyboardButton("Notificación de Deceso", callback_data="iniciar_deceso")],
         [InlineKeyboardButton("Plantilla de Guardia", callback_data="iniciar_plantilla")],
+        [InlineKeyboardButton("Traslado de Valores", callback_data="iniciar_traslado")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -46,12 +51,13 @@ if __name__ == '__main__':
 
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # Registrar módulos de reportes
-    app.add_handler(traslado_handler)
-    app.add_handler(deceso_handler)
-    app.add_handler(entrega_cadaver_handler)  # <--- NUEVO HANDLER REGISTRADO
+    # Registrar todos los módulos de reportes con prioridad de disparo
     app.add_handler(acta_handler)
+    app.add_handler(bienes_hallados_handler)
+    app.add_handler(entrega_cadaver_handler)
+    app.add_handler(deceso_handler)
     app.add_handler(plantilla_handler)
+    app.add_handler(traslado_handler)
 
     # Registrar comandos del menú general
     app.add_handler(CommandHandler('start', start_menu))
