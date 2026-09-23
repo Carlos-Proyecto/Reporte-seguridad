@@ -58,11 +58,9 @@ async def procesar_tipo_movimiento(update: Update, context: ContextTypes.DEFAULT
 
     # Adaptar la pregunta según el tipo de movimiento seleccionado
     if tipo == "Entrada":
-        prompt = "Escriba el *Lugar de Origen* de las bombonas:"
-    elif tipo == "Salida":
-        prompt = "Escriba el *Lugar de Destino* de las bombonas:"
-    else:  # Reemplazo
-        prompt = "Escriba el *Origen y Destino / Área de Reemplazo* de las bombonas:"
+        prompt = "Escriba el *Origen* de la bombona:"
+    else:  # Salida o Reemplazo
+        prompt = "Escriba el *Destino* de la bombona:"
 
     await query.message.reply_text(prompt, parse_mode="Markdown")
     return ORIGEN_DESTINO
@@ -79,7 +77,7 @@ async def recibir_persona_traslado(update: Update, context: ContextTypes.DEFAULT
 
 async def recibir_cantidad_bombonas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['cantidad_bombonas'] = update.message.text.strip()
-    await update.message.reply_text("Escriba la *Numeración / Seriales* de las bombonas movilizadas:", parse_mode="Markdown")
+    await update.message.reply_text("Escriba la *Numeración* de las bombonas movilizadas:", parse_mode="Markdown")
     return NUMERACION_BOMBONAS
 
 async def recibir_numeracion_bombonas(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -116,7 +114,7 @@ async def generar_reporte_final(message_obj, context: ContextTypes.DEFAULT_TYPE)
     saludo, fecha_str = obtener_saludo_y_fecha()
 
     tipo_mov = context.user_data['tipo_movimiento']
-    etiqueta_ub = "Origen" if tipo_mov == "Entrada" else ("Destino" if tipo_mov == "Salida" else "Origen / Destino")
+    etiqueta_ub = "Origen" if tipo_mov == "Entrada" else "Destino"
 
     lineas_reporte = [
         f"{saludo}",
@@ -127,7 +125,7 @@ async def generar_reporte_final(message_obj, context: ContextTypes.DEFAULT_TYPE)
         f"*{etiqueta_ub}:* {context.user_data['origen_destino']}",
         f"*Persona que Traslada:* {context.user_data['persona_traslado']}",
         f"*Cantidad Movilizada:* {context.user_data['cantidad_bombonas']}",
-        f"*Numeración / Seriales:* {context.user_data['numeracion_bombonas']}",
+        f"*Numeración:* {context.user_data['numeracion_bombonas']}",
         f"*Seguridad (Apertura de Jaula):* {context.user_data['seguridad_jaula']}"
     ]
 
