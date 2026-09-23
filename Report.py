@@ -11,6 +11,7 @@ from reportes.acta_emergencia import acta_handler
 from reportes.bienes_hallados import bienes_hallados_handler
 from reportes.entrega_cadaver import entrega_cadaver_handler
 from reportes.evento_estacionamiento import evento_estacionamiento_handler
+from reportes.movilizacion_oxigeno import oxigeno_handler
 from reportes.notificacion_deceso import deceso_handler
 from reportes.plantilla_guardia import plantilla_handler
 from reportes.traslado_valores import traslado_handler
@@ -28,6 +29,7 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Bienes Hallados", callback_data="iniciar_bienes")],
         [InlineKeyboardButton("Entrega de Cadáver", callback_data="iniciar_entrega")],
         [InlineKeyboardButton("Evento en Estacionamiento", callback_data="iniciar_evento_estac")],
+        [InlineKeyboardButton("Movilización de Oxígeno", callback_data="iniciar_oxigeno")],
         [InlineKeyboardButton("Notificación de Deceso", callback_data="iniciar_deceso")],
         [InlineKeyboardButton("Plantilla de Guardia", callback_data="iniciar_plantilla")],
         [InlineKeyboardButton("Traslado de Valores", callback_data="iniciar_traslado")],
@@ -58,6 +60,7 @@ if __name__ == '__main__':
     app.add_handler(bienes_hallados_handler)
     app.add_handler(entrega_cadaver_handler)
     app.add_handler(evento_estacionamiento_handler)
+    app.add_handler(oxigeno_handler)
     app.add_handler(deceso_handler)
     app.add_handler(plantilla_handler)
     app.add_handler(traslado_handler)
