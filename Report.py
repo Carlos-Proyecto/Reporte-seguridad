@@ -29,7 +29,7 @@ async def start_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Bienes Hallados", callback_data="iniciar_bienes")],
         [InlineKeyboardButton("Entrega de Cadáver", callback_data="iniciar_entrega")],
         [InlineKeyboardButton("Evento en Estacionamiento", callback_data="iniciar_evento_estac")],
-        [InlineKeyboardButton("Movilización de Oxígeno", callback_data="iniciar_oxigeno")],
+        [InlineKeyboardButton("Movilización de Bombonas", callback_data="iniciar_oxigeno")],
         [InlineKeyboardButton("Notificación de Deceso", callback_data="iniciar_deceso")],
         [InlineKeyboardButton("Plantilla de Guardia", callback_data="iniciar_plantilla")],
         [InlineKeyboardButton("Traslado de Valores", callback_data="iniciar_traslado")],
