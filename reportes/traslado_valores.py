@@ -1,11 +1,15 @@
 import urllib.parse
 from datetime import datetime
 import zoneinfo
+import httpx  # Requiere instalar httpx (pip install httpx)
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     CommandHandler, CallbackQueryHandler, MessageHandler,
     filters, ContextTypes, ConversationHandler
 )
+
+# URL obtenida tras desplegar el Webhook en Google Apps Script (Reemplazar con la tuya)
+URL_WEBHOOK_SHEETS = "https://script.google.com/macros/s/AKfycbyMUfBDs96PieqVLDHFNTh6NfDRUwCH7iWyWcL8OqChlb2DC2C5isZDLPgaCmj2qSCJ/exec"
 
 # Estados de la conversación
 CAJAS, HORA, GESTION_PAGO, SEGURIDAD, DESTINO, POLICIA, NOVEDADES = range(7)
@@ -36,6 +40,17 @@ def obtener_saludo_y_fecha():
     mes_nombre = MESES[ahora.month - 1]
     fecha_str = f"*{dia_nombre}, {ahora.day} de {mes_nombre}*"
     return saludo, fecha_str
+
+async def enviar_a_google_sheets(datos: dict):
+    """Envía la información del traslado de forma asíncrona a Google Sheets."""
+    try:
+        async with httpx.AsyncClient() as client:
+            # follow_redirects=True es fundamental para redirigir en Google Apps Script
+            response = await client.post(URL_WEBHOOK_SHEETS, json=datos, follow_redirects=True)
+            return response.status_code == 200
+    except Exception as e:
+        print(f"Error al enviar datos a Google Sheets: {e}")
+        return False
 
 async def iniciar_traslado(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_obj = update.message if update.message else update.callback_query.message
@@ -193,9 +208,10 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
 
     saludo, fecha_str = obtener_saludo_y_fecha()
     
-    # Formatear las cajas seleccionadas una debajo de otra con guion
+    # Formatear las cajas seleccionadas una debajo de otra con guion para el mensaje
     cajas_lista = context.user_data['cajas_sel']
     cajas_formateadas = "\n".join([f"- {caja}" for caja in cajas_lista])
+    cajas_linea_unica = ", ".join(cajas_lista)  # Para la columna de Google Sheets
 
     # Construcción del texto con la hora tras el destino
     texto_reporte = (
@@ -212,6 +228,32 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
         f"*Novedades:*\n{novedades}"
     )
 
+    # ---------------------------------------------------------------------
+    # REGISTRO EN GOOGLE SHEETS
+    # ---------------------------------------------------------------------
+    tz = zoneinfo.ZoneInfo("America/Caracas")
+    ahora = datetime.now(tz)
+    
+    # Combinar el personal involucrado para la columna "Persona que realiza el traslado"
+    personal_involucrado = f"Pago: {context.user_data['personal_pago']} | Seg: {context.user_data['personal_seguridad']}"
+    fecha_formateada = ahora.strftime("%Y-%m-%d")
+    marca_temporal = ahora.strftime("%Y-%m-%d %H:%M:%S")
+
+    datos_hoja = {
+        "marca_temporal": marca_temporal,
+        "persona_traslado": personal_involucrado,
+        "fecha": fecha_formateada,
+        "hora": context.user_data.get('hora_traslado', 'N/I'),
+        "cajas": cajas_linea_unica,
+        "destino": context.user_data['destino'],
+        "policia": context.user_data['policia'],
+        "observaciones": f"Novedades: {novedades}"
+    }
+
+    # Enviar al script en Google Sheets de forma asíncrona
+    await enviar_a_google_sheets(datos_hoja)
+    # ---------------------------------------------------------------------
+
     # Codificación para enlace de WhatsApp
     texto_encoded = urllib.parse.quote(texto_reporte)
     url_whatsapp = f"https://wa.me/?text={texto_encoded}"
@@ -220,7 +262,6 @@ async def generar_reporte_final(update: Update, context: ContextTypes.DEFAULT_TY
         [InlineKeyboardButton("Compartir en WhatsApp", url=url_whatsapp)],
         [InlineKeyboardButton("Nuevo Reporte", callback_data="volver_menu")]
     ])
-
 
     await msg_obj.reply_text(f"*REPORTE GENERADO:*\n\n{texto_reporte}", reply_markup=keyboard, parse_mode="Markdown")
     return ConversationHandler.END
