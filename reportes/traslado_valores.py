@@ -9,7 +9,7 @@ from telegram.ext import (
 )
 
 # URL obtenida tras desplegar el Webhook en Google Apps Script (Reemplazar con la tuya)
-URL_WEBHOOK_SHEETS = "https://script.google.com/macros/s/AKfycbyMUfBDs96PieqVLDHFNTh6NfDRUwCH7iWyWcL8OqChlb2DC2C5isZDLPgaCmj2qSCJ/exec"
+URL_WEBHOOK_SHEETS = "https://script.google.com/macros/s/AKfycbxEkuQPuThWJ4Y4Ce856X3yptJM4YPFW79Q6b1XGAszgGhWFbKH-r7hoA7hW4oxGQrc/exec"
 
 # Estados de la conversación
 CAJAS, HORA, GESTION_PAGO, SEGURIDAD, DESTINO, POLICIA, NOVEDADES = range(7)
